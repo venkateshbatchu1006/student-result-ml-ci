@@ -1,0 +1,47 @@
+
+name: Student Result ML Continuous Delivery
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-test-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Train ML model
+        run: python train_model.py
+
+      - name: Check model quality
+        run: python quality_gate.py
+
+      - name: Run API tests
+        run: python -m unittest test_app.py -v
+
+      - name: Prepare release package
+        run: |
+          mkdir release_candidate
+          cp app.py requirements.txt student_result_model.pkl metrics.json release_candidate/
+          echo "Run the application using python app.py" > release_candidate/DEPLOYMENT.txt
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: student-result-ml-release
+          path: release_candidate/
+          retention-days: 7
